@@ -1,4 +1,4 @@
-drop schema azeinda cascade;
+drop database azienda cascade;
 
 ----------------------------------------------------------------
 -- COPIARE DA QUI IN POI PER CREARE LE TABELLE LA PRIMA VOLTA --
