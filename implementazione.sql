@@ -163,35 +163,29 @@ ALTER TABLE articolo_comprato ADD CONSTRAINT constraint_partita FOREIGN KEY (par
 //Tabella partita
 ALTER TABLE partita ADD CONSTRAINT constraint_p_iva FOREIGN KEY (p_iva) REFERENCES fornitore (p_iva) ON DELETE NO ACTION ON UPDATE CASCADE;
 
-All’interno della base di dati sono presenti altri tipi di vincoli che implicano la creazione di appositi trigger per essere rispettati:
--la data di scadenza di un articolo non deve essere posteriore alla data in cui viene effettuato un ordine con quell’articolo
--quando inserisco un cliente in un mercato, l’agente che lo segue deve essere coordinato dal capo area che gestisce quel mercato
--il costo totale di un ordine deve essere uguale alla quantità di ciascun articolo venduto contenuto moltiplicato per il suo prezzo
--il prezzo di ogni articolo comprato deve essere uguale alla somma dei costi di acquisto, spedizione e stoccaggio, divisa per la quantità di articoli comprati presenti nella partita
--un ORDINE da parte del CLIENTE non può avvenire in una data antecedente a quella attuale (questo vale per la modifica della data dell'ordine)
+--All’interno della base di dati sono presenti altri tipi di vincoli che implicano la creazione di appositi trigger per essere rispettati:
+--- -la data di scadenza di un articolo non deve essere posteriore alla data in cui viene effettuato un ordine con quell’articolo
+--- -quando inserisco un cliente in un mercato, l’agente che lo segue deve essere coordinato dal capo area che gestisce quel mercato
+--- -il costo totale di un ordine deve essere uguale alla quantità di ciascun articolo venduto contenuto moltiplicato per il suo prezzo
+--- -il prezzo di ogni articolo comprato deve essere uguale alla somma dei costi di acquisto, spedizione e stoccaggio, divisa per la quantità di articoli comprati presenti nella partita
+--- -un ORDINE da parte del CLIENTE non può avvenire in una data antecedente a quella attuale (questo vale per la modifica della data dell'ordine)
 
 
 
-Vincoli risolvibili con l’aggiunta di not null nella tabella:
--Tabella cliente: un cliente deve avere almeno un recapito telefonico ed almeno una mail
+--Vincoli risolvibili con l’aggiunta di not null nella tabella:
+--- -Tabella cliente: un cliente deve avere almeno un recapito telefonico ed almeno una mail
  
- Di seguito sono riportati altri vincoli di integrità ancora da implementare:
--un cliente deve avere almeno un recapito telefonico ed almeno una mail
--un cliente deve afferire ad un unico mercato, il\i numero\i di telefono e gli indirizzi mail devono essere unici
--un capo area deve gestire un unico mercato
--un agente deve essere coordinato da un unico capo-area
--uno specifico ordine è effettuato da un unico cliente
--ogni articolo_venduto deve appartenere ad un unico ordine e ad una linea di prodotto unica
--ogni partita è fornita da un unico fornitore
+-- Di seguito sono riportati altri vincoli di integrità ancora da implementare:
+ --un cliente deve avere almeno un recapito telefonico ed almeno una mail
+--un cliente deve afferire ad un unico mercato, il\i numero\i di telefono e gli indirizzi mail devono essere unici
+--un capo area deve gestire un unico mercato
+--un agente deve essere coordinato da un unico capo-area
+--uno specifico ordine è effettuato da un unico cliente
+--ogni articolo_venduto deve appartenere ad un unico ordine e ad una linea di prodotto unica
+--ogni partita è fornita da un unico fornitore
 
 
-Gli altri sono tutti uguali e si possono risolvere allo stesso modo
-
-Contraints sulle date:
-Data di confezionamento < data_scadenza
-Data di ordine < data odierna
-
-Constraint numero 1: Data di confezionamento < data_scadenza
+--Constraint numero 1: Data di confezionamento < data_scadenza
 
 create or replace function check_date_valide(data_conf  date , data_scad  date) returns bool language plpgsql as $$     begin     return  data_conf < data_scad; end; $$ ;
 
@@ -199,7 +193,7 @@ alter  table  articolo_venduto add
  constraint  check_date_valide_ric
   check(check_date_valide(confezionamento ,scadenza ));
 
-Constraint numero 2: Data di ordine < data odierna
+--Constraint numero 2: Data di ordine < data odierna
 
 create or replace function check_date_valide_ordine(data_ordine date) returns bool language plpgsql as $$     begin   return data_ordine < current_date; end; $$ ;
 
@@ -208,28 +202,25 @@ alter  table  ordine add
  constraint  check_date_valide_ordine_ric
   check(check_date_valide_ordine(data));
 
-Il vincolo 1, diversamente dai precedenti vincoli sulle date, necessita di un trigger perché coinvolge attributi di tabelle diverse. 
-Il codice seguente deve essere eseguito quando sarà inserito nella base un nuovo ARTICOLO_COMPRATO o quando se ne modifica la data di Scadenza.
+--Il vincolo 1, diversamente dai precedenti vincoli sulle date, necessita di un trigger perché coinvolge attributi di tabelle diverse. 
+--Il codice seguente deve essere eseguito quando sarà inserito nella base un nuovo ARTICOLO_COMPRATO o quando se ne modifica la data di Scadenza.
 
 
-
-create  or  replace  function check_dateOrdine(fattura dom_fattura,dataScadenza date) returns trigger as
+create or replace function check_dateOrdine () returns trigger language plpgsql as
  $$ 
   begin
   perform *
-  from ordine
-  where n_fattura=fattura and ordine.data< dataScadenza
+  from ordine,articolo_venduto
+  where ordine.n_fattura=articolo_venduto.ordine and ordine.data< articolo_vendito.scadenza;
 if found
-    then
-raise  exception
-       ’Non è possibile vendere un articolo scaduto’;
- return  null;
-     else
-return  new;
+ then
+        raise  exception 'Non è possibile vendere un articolo scaduto';
+        return  null;
+ else
+   return  new;
   end if;
 end;
-$$  language  plpgsql;
-
+$$;
 create  trigger modifica_ordine before update
   on  articolo_venduto for  each  row
    when (new.scadenza <> old.scadenza)
@@ -241,30 +232,25 @@ create  trigger  newOrdine before  insert
 
 Il vincolo 2 è necessario per garantire che non si creino inconsistenze nel ciclo trattato nella Sezione 3.3.2.
 Il codice seguente deve essere eseguito quando si inserisce un nuovo cliente oppure si modifica l’agente che segue il cliente o il mercato di appartenenza del cliente.
-
-create  or  replace  function 
-check_cliente(cfAgente dom_cf,nomeMercato varchar(25))
-returns trigger as
-$$ 
-begin
-  perform *
-  from mercato,agente
-  where cfAgente=agente.cf and nomeMercato=mercato.nome and
-         not exists(select *
-                    from capo_area
-                    where agente.capo_area=capo_area.cf
-                          and capo_area.mercato <> nomeMercato)
+create  or  replace  function check_cliente() returns trigger language plpgsql as
+ $$ 
+   begin
+   perform *
+   from capo_area,agente,cliente
+    where agente.capo_area=capo_area.cf and cliente.agente=agente.cf and
+                 not exists(select *
+                             from mercato
+                             where cliente.mercato <> capo_area.mercato; );
 if found
-    then
-raise  exception
-       ’Non rispetta i vincoli di integrità ’;
-return  null;
-     else
-return  new;
+ then
+        raise  exception 'Non rispetta i vincoli';
+        return  null;
+ else
+   return  new;
   end if;
 end;
-
-$$  language  plpgsql;
+$$;				 
+				 
 
 create  trigger  newCliente before insert
   on  cliente for  each  row
