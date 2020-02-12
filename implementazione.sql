@@ -224,14 +224,14 @@ $$;
 create  trigger modifica_ordine before update
   on  articolo_venduto for  each  row
    when (new.scadenza <> old.scadenza)
-  execute  procedure check_dateOrdine(ordine,scadenza);
+  execute  procedure check_dateOrdine();
 
 create  trigger  newOrdine before  insert
   on  articolo_venduto for  each  row
-  execute  procedure check_dateOrdine(ordine,scadenza);
+  execute  procedure check_dateOrdine();
 
-Il vincolo 2 è necessario per garantire che non si creino inconsistenze nel ciclo trattato nella Sezione 3.3.2.
-Il codice seguente deve essere eseguito quando si inserisce un nuovo cliente oppure si modifica l’agente che segue il cliente o il mercato di appartenenza del cliente.
+--Il vincolo 2 è necessario per garantire che non si creino inconsistenze nel ciclo trattato nella Sezione 3.3.2.
+--Il codice seguente deve essere eseguito quando si inserisce un nuovo cliente oppure si modifica l’agente che segue il cliente o il mercato di appartenenza del cliente.
 create  or  replace  function check_cliente() returns trigger language plpgsql as
  $$ 
    begin
@@ -240,7 +240,7 @@ create  or  replace  function check_cliente() returns trigger language plpgsql a
     where agente.capo_area=capo_area.cf and cliente.agente=agente.cf and
                  not exists(select *
                              from mercato
-                             where cliente.mercato <> capo_area.mercato; );
+                             where cliente.mercato <> capo_area.mercato );
 if found
  then
         raise  exception 'Non rispetta i vincoli';
@@ -254,96 +254,85 @@ $$;
 
 create  trigger  newCliente before insert
   on  cliente for  each  row
-  execute  procedure check_cliente(agente, mercato);
+  execute  procedure check_cliente();
 
 create  trigger cliente_modifica before update
   on  cliente for  each  row
    when ( new.agente  <> old.agente  or
             new.mercato  <> old.mercato)
-  execute  procedure check_cliente(agente, mercato);
+  execute  procedure check_cliente();
 
 
-
-
-
-
-
-Data di un ordine non deve essere successiva alla data odierna (considero data in cui viene fatto l’ordine e non data in cui viene consegnato al cliente). Viene eseguito quando modifico data dell’ordine 
-
-create  or  replace  function 
-check_ordine(numeroFattura dom_fattura)
-returns trigger as
-$$ 
-begin
-  perform *
-  from ordine
-  where n_fattura=numeroFattura and data>current_date
+--Data di un ordine non deve essere successiva alla data odierna (considero data in cui viene fatto l’ordine e non data in cui viene consegnato al cliente). Viene eseguito quando modifico data dell’ordine 
+//da fare
+				 
+create or replace function check_ordine() returns trigger language plpgsql as
+ $$
+   begin
+   perform *
+   from ordine
+   where ordine.data>=current_date ;
 if found
-    then
-raise  exception
-       ’Non è possibile fare un ordine per il futuro’;
- return  null;
-     else
-return  new;
+ then
+        raise exception 'Non si può fare un ordine per il futuro';
+        return  null;
+ else
+   return  new;
   end if;
 end;
-$$  language  plpgsql;
+$$;
 
+				 
 create  trigger modifica_ordine before update
   on  ordine for  each  row
    when ( new.data <> old.data)
-  execute  procedure check_ordine(n_fattura);
+  execute  procedure check_ordine();
 
 
-Per attributi derivati SQL non offre un costrutto, perciò è necessario creare dei trigger
-Attributi derivati :
-1)Tabella ordine: costo_totale = quantità * prezzo articolo (perchè attributo derivato)
-2)Tabella articolo_comprato: prezzo = (costo acquisto + spedizione + stoccaggio) \ quantità 
+--Per attributi derivati SQL non offre un costrutto, perciò è necessario creare dei trigger
+--Attributi derivati :
+--1)Tabella ordine: costo_totale = quantità * prezzo articolo (perchè attributo derivato)
+--2)Tabella articolo_comprato: prezzo = (costo acquisto + spedizione + stoccaggio) \ quantità 
 
-Implementazione primo trigger:
-Trigger differenti per inserimento e aggiornamento
-Devo modificare il campo costo_totale di ordine quando:
--Inserisco un nuovo articolo
--Modifico il campo prezzo_articolo o quantita di articolo_venduto
-
-
-Definiamo prima la funzione che servirà per calcolare il costo_totale:
+--Implementazione primo trigger:
+--Trigger differenti per inserimento e aggiornamento
+--Devo modificare il campo costo_totale di ordine quando:
+---Inserisco un nuovo articolo
+---Modifico il campo prezzo_articolo o quantita di articolo_venduto
 
 
-create  or  replace  function 
-calcolo_costo(NumFattura dom_fattura)
-returns float
-language  plpgsql as $$ 
-declare
-   quantita int:= 0;
-   prezzo float := 0;
-   costo float :=0;
-  
-begin
-  select av.prezzo_articolo as prezzo, av.quantita as quantita
-  from ordine as o, articolo_venduto as av
-  where av.ordine=o.n_fattura and o.n_fattura=NumFattura;
-return  costo=prezzo*quantita;
+--Definiamo prima la funzione che servirà per calcolare il costo_totale:
+
+
+create or replace function calcolo_costo(NumFattura dom_fattura)
+returns float as 
+ $$ 
+  declare
+     quantita int:= 0;
+     prezzo float := 0;
+     costo float :=prezzo*quantita;
+  begin
+     select av.prezzo_articolo as prezzo, av.quantita as quantita
+     from ordine as o, articolo_venduto as av
+     where av.ordine=o.n_fattura and o.n_fattura=NumFattura;
+     return costo;
 end;
-$$ ;
+$$ language plpgsql;
 
 
 
-create  or  replace  function 
-insert_costo_ordine()
-returns trigger as
-$$ 
-begin
---inserimento nuovo ordine 
+create  or  replace  function insert_costo_ordine()
+returns trigger language  plpgsql as
+ $$ 
+  begin
   update ordine
   set costo_totale= calcolo_costo(new.ordine)
   where new.ordine=ordine.n_fattura
-return  new;
-end;
-$$  language  plpgsql;
+  return  new;
+ end;
+$$;
 
-create  or  replace  function 
-update_costo_ordine()
+create  or  replace  function update_costo_ordine()
 returns trigger as
 $$ 
 begin
