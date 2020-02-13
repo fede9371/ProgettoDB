@@ -264,7 +264,6 @@ create  trigger cliente_modifica before update
 
 
 --Data di un ordine non deve essere successiva alla data odierna (considero data in cui viene fatto l’ordine e non data in cui viene consegnato al cliente). Viene eseguito quando modifico data dell’ordine 
-//da fare
 				 
 create or replace function check_ordine() returns trigger language plpgsql as
  $$
@@ -327,33 +326,10 @@ returns trigger language  plpgsql as
   begin
   update ordine
   set costo_totale= calcolo_costo(new.ordine)
-  where new.ordine=ordine.n_fattura
+  where new.ordine=ordine.n_fattura;
   return  new;
  end;
 $$;
-
-create  or  replace  function update_costo_ordine()
-returns trigger as
-$$ 
-begin
-  update ordine
-  set costo_totale= calcolo_costo(new.ordine)
-  where new.ordine-=ordine.n_fattura
-
---se ho cambiato ordine devo ricalcolare il valore 
-
-if(new.ordine <> old.ordine)
-  then
-  update ordine
-  set costo_totale= calcolo_costo(old.ordine)
-  where old.ordine=ordine.n_fattura
-  end if;
-
-
-return  new;
-end;
-$$  language  plpgsql;
-
 
 
 create  trigger insert_ordine before insert
@@ -364,77 +340,52 @@ create  trigger modifica_articolo before update
   on  articolo_venduto for  each  row
    when (new.prezzo_articolo <> old.prezzo_articolo or
           new.quantita  <> old.quantita )
-  execute  procedure update_costo_ordine();
+  execute  procedure insert_costo_ordine();
 
-2) Tabella articolo_comprato: prezzo = (costo acquisto + spedizione + stoccaggio) \ quantità 
+--2) Tabella articolo_comprato: prezzo = (costo acquisto + spedizione + stoccaggio) \ quantità 
 
-Implementazione secondo trigger:
-Trigger differenti per inserimento e aggiornamento
-Devo modificare il campo prezzo di articolo_comprato quando:
--Inserisco un nuovo articolo
--Modifico il campo costo_acquisto o costo_stoccaggio o costo_spedizione o quantita di partita
+--Implementazione secondo trigger:
+--Trigger differenti per inserimento e aggiornamento
+--Devo modificare il campo prezzo di articolo_comprato quando:
+--Inserisco un nuovo articolo
+--Modifico il campo costo_acquisto o costo_stoccaggio o costo_spedizione o quantita di partita
 
-Definiamo prima la funzione che servirà per calcolare il prezzo:
+--Definiamo prima la funzione che servirà per calcolare il prezzo:
 
 
 
-create  or  replace  function 
-calcolo_prezzo_articolo(partita dom_partita)
-returns float
-language  plpgsql as $$ 
+create  or  replace  function calcolo_prezzo_articolo(partita dom_partita)
+returns float language  plpgsql as $$ 
 declare
    quantita int:= 0;
    costo_acquisto float := 0;
    costo_stoccaggio float :=0;
    costo_spedizione float :=0;
-   prezzo_tot float :=0;
+   prezzo_tot float :=(costo_spedizione + costo_stoccaggio + costo_acquisto)/quantita;
 begin
   select p.quantita as quantita, p.costo_acquisto as costo_acquisto,
          p.costo_stoccaggio as costo_stoccaggio, p.costo_spedizione as 
          costo_spedizione  
 from partita as p, articolo_comprato as ac
   where ac.partita=p.codice and ac.partita=partita;
-return prezzo_tot= (costo_spedizione + costo_stoccaggio + costo_acquisto)     \ quantita
+return prezzo_tot;
 end;
 $$ ;
 
 
 
-create  or  replace  function 
-insert_prezzo_articolo()
-returns trigger as
-$$ 
-begin
---inserimento nuovo articolo
-  update articolo_comprato
-  set prezzo=calcolo_prezzo_articolo(partita dom_partita)
-  where new.partita=articolo_comprato.partita
-return  new;
-end;
-$$  language  plpgsql;
+create  or  replace function insert_prezzo_articolo()
+returns trigger language plpgsql as
+ $$ 
+  begin
 
-create  or  replace  function 
-update_prezzo_articolo()
-returns trigger as
-$$ 
-begin
-  update ordine
-  set prezzo=calcolo_prezzo_articolo(partita dom_partita)
-  where new.partita=articolo_comprato.partita
+    update articolo_comprato
+    set prezzo=calcolo_prezzo_articolo(partita)
+    where new.articolo_comprato=articolo_comprato.partita;
+  return  new;
+ end;
+$$;
 
---se ho cambiato ordine devo ricalcolare il valore 
-
-if(new.partita <> old.partita)
-  then
-  update articolo_comprato
-  set prezzo=calcolo_prezzo_articolo(partita dom_partita)
-  where old.partita=articolo_comprato.partita
-  end if;
-
-
-return  new;
-end;
-$$  language  plpgsql;
 
 create  trigger insert_articolo_comprato before insert
   on  articolo_comprato for  each  row
@@ -446,7 +397,7 @@ create  trigger modifica_articolo_comprato before update
          new.costo_spedizione  <> old.costo_spedizione or
          new.costo_acquisto  <> old.costo_acquisto or
          new.costo_stoccaggio <> old.costo_stoccaggio )
-  execute  procedure update_prezzo_articolo();
+  execute  procedure insert_prezzo_articolo();
 
 
 
