@@ -309,9 +309,9 @@ returns float as
   declare
      quantita int:= 0;
      prezzo float := 0;
-     costo float :=prezzo*quantita;
+     costo float :=0;
   begin
-     select av.prezzo_articolo as prezzo, av.quantita as quantita
+     select costo into quantita*prezzo
      from ordine as o, articolo_venduto as av
      where av.ordine=o.n_fattura and o.n_fattura=NumFattura;
      return costo;
@@ -327,7 +327,7 @@ returns trigger language  plpgsql as
   update ordine
   set costo_totale= calcolo_costo(new.ordine)
   where new.ordine=ordine.n_fattura;
-  return  new;
+  return new;
  end;
 $$;
 
@@ -361,14 +361,12 @@ declare
    costo_acquisto float := 0;
    costo_stoccaggio float :=0;
    costo_spedizione float :=0;
-   prezzo_tot float :=(costo_spedizione + costo_stoccaggio + costo_acquisto)/quantita;
+   prezzo_tot float :=0;
 begin
-  select p.quantita as quantita, p.costo_acquisto as costo_acquisto,
-         p.costo_stoccaggio as costo_stoccaggio, p.costo_spedizione as 
-         costo_spedizione  
-from partita as p, articolo_comprato as ac
+  select prezzo_tot into costo_spedizione + costo_stoccaggio + costo_acquisto
+  from partita as p, articolo_comprato as ac
   where ac.partita=p.codice and ac.partita=partita;
-return prezzo_tot;
+return (prezzo_tot/quantita);
 end;
 $$ ;
 
@@ -378,10 +376,8 @@ create  or  replace function insert_prezzo_articolo()
 returns trigger language plpgsql as
  $$ 
   begin
-
     update articolo_comprato
-    set prezzo=calcolo_prezzo_articolo(partita)
-    where new.articolo_comprato=articolo_comprato.partita;
+    set prezzo=calcolo_prezzo_articolo(partita);
   return  new;
  end;
 $$;
