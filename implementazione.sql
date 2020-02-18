@@ -92,9 +92,9 @@ CREATE TABLE articolo_venduto(
     descrizione varchar(100),
     scadenza date not null,
     confezionamento date not null,
-    ordine dom_fattura not null unique,
+    ordine dom_fattura not null,
     quantita int not null,
-    linea_prodotto varchar not null unique,
+    linea_prodotto varchar not null ,
     articolo_comprato dom_articoloComp not null,
     partita dom_partita not null);
 
@@ -193,9 +193,9 @@ alter  table  articolo_venduto add
  constraint  check_date_valide_ric
   check(check_date_valide(confezionamento ,scadenza ));
 
---Constraint numero 2: Data di ordine < data odierna
+--Constraint numero 2: Data di ordine <= data odierna
 
-create or replace function check_date_valide_ordine(data_ordine date) returns bool language plpgsql as $$     begin   return data_ordine < current_date; end; $$ ;
+create or replace function check_date_valide_ordine(data_ordine date) returns bool language plpgsql as $$     begin   return data_ordine<=current_date; end; $$ ;
 
 
 alter  table  ordine add
@@ -211,13 +211,13 @@ create or replace function check_dateOrdine () returns trigger language plpgsql 
   begin
   perform *
   from ordine,articolo_venduto
-  where ordine.n_fattura=articolo_venduto.ordine and ordine.data< articolo_venduto.scadenza;
+  where articolo_venduto.ordine=ordine.n_fattura and (articolo_venduto.scadenza > ordine.data);
 if found
  then
-        raise  exception 'Non è possibile vendere un articolo scaduto';
-        return  null;
- else
-   return  new;
+	 return new;			 
+else
+    raise  exception 'Non è possibile vendere un articolo scaduto';
+    return  null;
   end if;
 end;
 $$;
