@@ -11,3 +11,5 @@ insert into ordine values ('12',10,'2019-09-18','00743110157');
 
 --Inserisco alcuni valori nella base di dati per controllare i trigger
 insert into mercato values ('Triveneto');
+insert into capo_area values('BNCMRA80A01C957Z','Mario','Rossi','1965-12-09','Via roma','m','Triveneto');
+insert into agente values('FRTNNA80A41L407I','Anna','Forte','1965-12-09','Via roma','f','BNCMRA80A01C957Z');
