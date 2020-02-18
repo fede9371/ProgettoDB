@@ -211,7 +211,7 @@ create or replace function check_dateOrdine () returns trigger language plpgsql 
   begin
   perform *
   from ordine,articolo_venduto
-  where ordine.n_fattura=articolo_venduto.ordine and ordine.data< articolo_vendito.scadenza;
+  where ordine.n_fattura=articolo_venduto.ordine and ordine.data< articolo_venduto.scadenza;
 if found
  then
         raise  exception 'Non è possibile vendere un articolo scaduto';
