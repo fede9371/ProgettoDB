@@ -22,7 +22,7 @@ insert into cliente values ('00743110157','Dario','0438131234','dario@gmail.com'
 insert into cliente values ('25389560159','Marco','0438321234','marco@gmail.com','FRTNNA80A41L407I','Sardegna');
 --Questo dovrebbe fallire perchè non si possono vendere articoli scaduti
 insert into articolo_venduto values (1235,7.89,200,'Duecentokcal','prosciutto','2018-12-01','2017-09-19',12,7,'CasaleA',27,'AB3153');
---Questo dovrebbe funzionare E INVECE NOOO PERCHEEE
+--Questo dovrebbe funzionare
 insert into articolo_venduto values (1234,7.89,200,'Duecentokcal','prosciutto','2020-12-01','2019-09-01',12,7,'CasaleA',27,'AB3153');
 insert into articolo_venduto values (7967,7.89,200,'Duecentokcal','petto','2021-12-01','2019-09-19',12,7,'CasaleB',27,'AB3153');
 insert into articolo_comprato values('27','AB3153',4,34.4);
