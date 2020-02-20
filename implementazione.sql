@@ -211,7 +211,7 @@ create or replace function check_dateOrdine () returns trigger language plpgsql 
   begin
   perform *
   from ordine,articolo_venduto
-  where articolo_venduto.ordine=ordine.n_fattura and (articolo_venduto.scadenza > ordine.data);
+  where  new.ordine=ordine.n_fattura and (new.scadenza > ordine.data);
 if found
  then
 	 return new;			 
