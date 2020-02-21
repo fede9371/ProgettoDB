@@ -75,7 +75,7 @@ CREATE TABLE ordine (
     n_fattura dom_fattura primary key,
     costo_totale numeric not null ,
     data date not null,
-    cliente dom_piva not null unique);
+    cliente dom_piva not null);
 
 CREATE TABLE linea_prodotto(
     nome varchar(25)primary key);
@@ -307,25 +307,34 @@ create or replace function calcolo_costo(NumFattura dom_fattura)
 returns float as 
  $$ 
   declare
-     quantita int:= 0;
      prezzo float := 0;
-     costo float :=0;
   begin
-     select costo into quantita*prezzo
+     select prezzo into prezzo
      from ordine as o, articolo_venduto as av
      where av.ordine=o.n_fattura and o.n_fattura=NumFattura;
-     return costo;
+     return prezzo;
 end;
 $$ language plpgsql;
 
-
+create or replace function calcolo_quantita(NumFattura dom_fattura)
+returns float as 
+ $$ 
+  declare
+     quantita int:= 0;
+  begin
+     select quantita into quantita
+     from ordine as o, articolo_venduto as av
+     where av.ordine=o.n_fattura and o.n_fattura=NumFattura;
+     return quantita;
+end;
+$$ language plpgsql;
 
 create  or  replace  function insert_costo_ordine()
 returns trigger language  plpgsql as
  $$ 
   begin
   update ordine
-  set costo_totale= calcolo_costo(new.ordine)
+  set costo_totale= calcolo_costo(new.ordine)*calcolo_quantita(new.ordine)
   where new.ordine=ordine.n_fattura;
   return new;
  end;
@@ -354,22 +363,29 @@ create  trigger modifica_articolo before update
 
 
 
-create  or  replace  function calcolo_prezzo_articolo(partita dom_partita)
+create  or  replace  function calcolo_prezzo_articolo(partitaInput dom_partita)
 returns float language  plpgsql as $$ 
 declare
-   quantita int:= 0;
-   costo_acquisto float := 0;
-   costo_stoccaggio float :=0;
-   costo_spedizione float :=0;
    prezzo_tot float :=0;
 begin
-  select prezzo_tot into costo_spedizione + costo_stoccaggio + costo_acquisto
+  select sum(costo_spedizione + costo_stoccaggio + costo_acquisto) into prezzo_tot
   from partita as p, articolo_comprato as ac
-  where ac.partita=p.codice and ac.partita=partita;
-return (prezzo_tot/quantita);
+  where p.codice=partitaInput and p.codice=ac.partita;
+return prezzo_tot;
 end;
 $$ ;
 
+create  or  replace  function calcolo_prezzo_articolo_conQuantita(partitaInput dom_partita)
+returns float language  plpgsql as $$ 
+declare
+      quantita int:= 0;
+begin
+  select p.quantita into quantita
+  from partita as p, articolo_comprato as ac
+  where p.codice=partitaInput;
+return quantita;
+end;
+$$ ;
 
 
 create  or  replace function insert_prezzo_articolo()
@@ -377,7 +393,7 @@ returns trigger language plpgsql as
  $$ 
   begin
     update articolo_comprato
-    set prezzo=calcolo_prezzo_articolo(partita);
+    set prezzo=(calcolo_prezzo_articolo(partita)/calcolo_prezzo_articolo_conQuantita(partita));
   return  new;
  end;
 $$;
