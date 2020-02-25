@@ -27,3 +27,5 @@ insert into articolo_venduto values (1234,7.89,200,'Duecentokcal','prosciutto','
 insert into articolo_venduto values (7967,7.89,200,'Duecentokcal','petto','2021-12-01','2019-09-19',12,7,'CasaleB',27,'AB3153');
 insert into articolo_comprato values('27','AB3153',4,34.4);
 insert into partita values('AB3153',12,'prima','0','maiale','baby',12.45,'24.23','12.55','22190050652');
+insert into partita values('AC3512',13,'seconda','1','cavallo','pony',16.78,'12.34','15.8','56363201205');
+insert into articolo_comprato values('2','AC3512',2,12.3);
