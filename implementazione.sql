@@ -41,7 +41,7 @@ CREATE TABLE agente (
     nascita date not null,
     indirizzo varchar(100) not null,
     sesso varchar(1) check (sesso in ('m', 'f')) not null,
-    capo_area dom_cf not null unique);
+    capo_area dom_cf not null);
  
 CREATE TABLE mercato (
 	nome varchar(25) primary key);
@@ -69,7 +69,7 @@ CREATE TABLE cliente (
     tel dom_tel not null unique,
     mail dom_email not null unique ,
     agente dom_cf not null,
-    mercato varchar(25) not null unique);
+    mercato varchar(25) not null);
 
 CREATE TABLE ordine (
     n_fattura dom_fattura primary key,
@@ -108,7 +108,7 @@ CREATE TABLE partita (
  costo_acquisto numeric not null,
  costo_stoccaggio numeric not null,
  costo_spedizione numeric not null,
- p_iva dom_piva unique
+ p_iva dom_piva not null
  );
 
 CREATE TABLE articolo_comprato (
@@ -382,7 +382,7 @@ declare
 begin
   select p.quantita into quantita
   from partita as p, articolo_comprato as ac
-  where p.codice=partitaInput;
+  where p.codice=partitaInput and p.codice=ac.partita;
 return quantita;
 end;
 $$ ;
@@ -392,18 +392,19 @@ create  or  replace function insert_prezzo_articolo()
 returns trigger language plpgsql as
  $$ 
   begin
-    update articolo_comprato
-    set prezzo=(calcolo_prezzo_articolo(partita)/calcolo_prezzo_articolo_conQuantita(partita));
-  return  new;
+    update articolo_comprato 
+    set prezzo=(calcolo_prezzo_articolo(new.partita)/calcolo_prezzo_articolo_conQuantita(new.partita))
+    where new.partita=articolo_comprato.partita;
+  return new;
  end;
 $$;
 
 
-create  trigger insert_articolo_comprato before insert
-  on  articolo_comprato for  each  row
+create  trigger insert_articolo_comprato after insert
+  on  articolo_comprato for each row
   execute  procedure insert_prezzo_articolo();
 
-create  trigger modifica_articolo_comprato before update
+create  trigger modifica_articolo_comprato after update
   on  partita for  each  row
    when (new.quantita <> old.quantita or
          new.costo_spedizione  <> old.costo_spedizione or
