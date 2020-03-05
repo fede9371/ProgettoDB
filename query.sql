@@ -47,6 +47,38 @@ GROUP BY partita;
 SELECT C1.partita
 FROM COUNT_ARTICOLI AS C1
 WHERE NOT EXISTS (SELECT *
-			FROM COUNT_ARTICOLI AS C2
-			WHERE C1.num_articoli < C2.num_articoli AND
-				C1.partita <> C2.partita);
+		  FROM COUNT_ARTICOLI AS C2
+	          WHERE C1.num_articoli < C2.num_articoli AND
+			C1.partita <> C2.partita);
+				
+--Query 4
+--Si vogliono trovare tutti i clienti che hanno effettuato almeno due ordini e ordinarli in ordine crescente di nome 
+CREATE VIEW PIVA AS
+SELECT O.cliente
+FROM ORDINE AS O
+WHERE EXISTS (SELECT *
+	      FROM ORDINE AS O1
+	      WHERE O1.n_fattura <> O.n_fattura AND
+		     O1.cliente=O.cliente);
+SELECT DISTINCT C.nome
+FROM PIVA AS P, CLIENTE AS C
+WHERE P.cliente=C.p_iva
+ORDER BY C.nome;
+
+--Query 5
+--Trovare tutti i clienti che hanno effettuato solo ordini di articoli provenienti da partite bio
+CREATE VIEW PARTITEBIO AS
+SELECT O.n_fattura, O.cliente, AV.partita, P.bio
+FROM ORDINE AS O, ARTICOLO_VENDUTO AS AV, PARTITA AS P
+WHERE AV.ordine=O.n_fattura AND AV.partita=P.codice;
+
+SELECT C.p_iva, C.nome
+FROM CLIENTE AS C, PARTITEBIO AS PB
+WHERE PB.cliente=C.p_iva
+EXCEPT 
+SELECT C.p_iva, C.nome
+FROM CLIENTE AS C, PARTITEBIO AS PB
+WHERE PB.cliente=C.p_iva AND PB.bio='f';
+
+	
+	
