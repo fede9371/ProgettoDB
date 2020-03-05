@@ -61,6 +61,8 @@ insert into articolo_comprato values('2','AC3512',2,12.3);
 insert into articolo_comprato values('3','AC3512',2,12.3);
 insert into articolo_venduto values (1004,7.89,200,'Duecentokcal','prosciutto','2020-12-01','2019-09-01',9,7,'CasaleA',2,'AC3512');
 insert into articolo_venduto values (1006,12.45,200,'Duecentokcal','petto','2021-12-01','2019-09-19',8,7,'CasaleB',3,'AC3512');
-
+--Query 4
+insert into ordine values ('7',10,'2014-09-18','00712470312');
+insert into ordine values ('6',10,'2012-09-18','00712470312');
 
 
