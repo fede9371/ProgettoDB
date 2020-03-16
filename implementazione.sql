@@ -14,35 +14,32 @@ create domain dom_partita as varchar check(value ~ '[A-Z]{2}[0-9]{4}');
 create domain dom_email as varchar 
 check(value ~'^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$');
 
-create sequence dom_fattura_seq;
-create domain dom_fattura as int default nextval('dom_fattura_seq');
-
 create domain dom_piva as varchar check(value ~ '[0-9]{11}');
 
 create domain dom_tel as varchar check(value ~ '[0-9]{10}');
 
-create sequence dom_articoloComp_seq;
-create domain dom_articoloComp as int default nextval('dom_articoloComp_seq');
+create domain dom_articolo_comp as varchar check(value ~ '[A-Z]{2}[0-9]{6}');
+create domain dom_articolo_vend as varchar check(value ~ '[A-Z]{3}[0-9]{8}');
 
 
 CREATE TABLE capo_area (
-    cf dom_cf primary key,
-    nome varchar(50) not null,
-    cognome varchar(50) not null,
-    nascita date not null,
-    indirizzo varchar(100) not null,
-    sesso varchar(1) check (sesso in ('m', 'f')) not null,
-    mercato varchar(25) not null unique);
+  cf dom_cf primary key,
+  nome varchar(50) not null,
+  cognome varchar(50) not null,
+  nascita date not null,
+  indirizzo varchar(100) not null,
+  sesso varchar(1) check (sesso in ('m', 'f')) not null,
+  mercato varchar(25) not null unique);
  
 CREATE TABLE agente (
-    cf dom_cf primary key,
-    nome varchar(50) not null,
-    cognome varchar(50) not null,
-    nascita date not null,
-    indirizzo varchar(100) not null,
-    sesso varchar(1) check (sesso in ('m', 'f')) not null,
-    capo_area dom_cf not null);
- 
+        cf dom_cf primary key,
+        nome varchar(50) not null,
+        cognome varchar(50) not null,
+        nascita date not null,
+        indirizzo varchar(100) not null,
+        sesso varchar(1) check (sesso in ('m', 'f')) not null,
+        capo_area dom_cf not null);
+				
 CREATE TABLE mercato (
 	nome varchar(25) primary key);
 
@@ -72,7 +69,7 @@ CREATE TABLE cliente (
     mercato varchar(25) not null);
 
 CREATE TABLE ordine (
-    n_fattura dom_fattura primary key,
+    n_fattura integer primary key,
     costo_totale numeric not null ,
     data date not null,
     cliente dom_piva not null);
@@ -85,17 +82,16 @@ CREATE TABLE fornitore (
     nome varchar(50) not null);
 
 CREATE TABLE articolo_venduto(
-    codice integer primary key,
+    codice dom_articolo_vend primary key,
     prezzo_articolo float not null,
     peso float not null,
-    valori_nutrizionali varchar,
     descrizione varchar(100),
     scadenza date not null,
     confezionamento date not null,
-    ordine dom_fattura not null,
+    ordine integer not null,
     quantita int not null,
     linea_prodotto varchar not null ,
-    articolo_comprato dom_articoloComp not null,
+    articolo_comprato dom_articolo_comp not null,
     partita dom_partita not null);
 
 CREATE TABLE partita (
@@ -112,7 +108,7 @@ CREATE TABLE partita (
  );
 
 CREATE TABLE articolo_comprato (
- codice dom_articoloComp ,
+ codice dom_articolo_comp,
  partita dom_partita,
  eta numeric not null,
  prezzo numeric not null,
@@ -303,7 +299,7 @@ create  trigger modifica_ordine before update
 --Definiamo prima la funzione che servirà per calcolare il costo_totale:
 
 
-create or replace function calcolo_costo(NumFattura dom_fattura)
+create or replace function calcolo_costo(NumFattura integer)
 returns float as 
  $$ 
   declare
