@@ -295,11 +295,11 @@ returns trigger language  plpgsql as
  end;
 $$;
 
-create  trigger insert_ordine before insert
+create  trigger insert_ordine after insert
   on  articolo_venduto for  each  row
   execute  procedure insert_costo_ordine();
 
-create  trigger modifica_articolo before update
+create  trigger modifica_articolo after update
   on  articolo_venduto for  each  row
    when (new.prezzo_articolo <> old.prezzo_articolo or
           new.quantita  <> old.quantita )
