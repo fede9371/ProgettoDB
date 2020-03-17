@@ -11,11 +11,10 @@ fq<-dbGetQuery(con, "
            
            ")
 
-fq
 
 ggplot(fq,aes(nome,count,color=nome))+
   geom_col()+
-  labs(x='Mercati',y='Numero ordini', title= 'Numero di ordini per mercato')+
+  labs(x='Mercati',y='Numero clienti', title= 'Numero clienti per mercato')+
   theme(
   axis.text.x=element_blank(),
   axis.ticks.x=element_blank())
