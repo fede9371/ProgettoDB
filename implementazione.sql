@@ -10,7 +10,7 @@ create domain dom_email as varchar check(value ~'^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+
 create domain dom_piva as varchar check(value ~ '[0-9]{11}');
 create domain dom_tel as varchar check(value ~ '[0-9]{10}');
 create domain dom_articolo_comp as varchar check(value ~ '[A-Z]{2}[0-9]{6}');
-create domain dom_articolo_vend as varchar check(value ~ '[A-Z]{3}[0-9]{8}');
+create domain dom_articolo_vend as varchar check(value ~ '[A-Z]{2}[0-9]{8}');
 
 
 CREATE TABLE capo_area (
