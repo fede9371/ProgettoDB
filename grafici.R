@@ -1,3 +1,15 @@
+require(tidyverse)
+require('RPostgreSQL')
+require("httr")
+drv <- dbDriver('PostgreSQL')
+
+con <- dbConnect(drv,
+                # dbname = 'azienda',
+                # host = '127.0.0.1',
+                 host = "localhost",
+                 port = 5432, 
+                 user = 'postgres',
+                 password='federica6345')
 library(ggplot2)
 
 # Query 
